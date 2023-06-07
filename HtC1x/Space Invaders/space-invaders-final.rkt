@@ -184,7 +184,6 @@
 (define (handle-key s ke)
   (make-game (game-invaders s) (fire-missile (game-missiles s) (game-tank s) ke) (tank-direction (game-tank s) ke)))
 
-
 ;; Game -> Image
 ;; produce the image of game state, for every Invader in ListOfInvader, Missile in ListOfMissile and Tank
 ;;!! Need to finish Invader
@@ -206,7 +205,6 @@
 
 (define (tick-tank t)
   (make-tank (next-x-tank t) (tank-dir t)))
-
 
 ;; Tank -> Image
 ;; Consumes a tank and produce its image, based on its x position in the moment
