@@ -227,7 +227,6 @@
 ;(define (position-of-tank t) 50);stub
 
 ;<Template from Tank>
-
 (define (next-x-tank t)
   (cond [(= (tank-dir t) 0) (tank-x t)]             ;not moving
         [(and (> (tank-dir t) 0) (can-tank-move? t)) (+ (tank-x t) TANK-SPEED)]   ;moving right
@@ -370,7 +369,6 @@
 
 ;; ListOfInvaders Boolean -> ListOfInvaders
 ;; add a new invader to the list of invaders case random-generate true, based on INVADE-RATE, if false return the original list of invader
-
 (define (generate-loi loi)
   (cond [(spawn? INVADE-RATE) (spawn-invader loi)]
         [else
@@ -423,7 +421,6 @@
                       (invader-x (first loi))
                       (invader-y (first loi))
                       (render-loi (rest loi) image))]))
-
 
 ;; ListOfInvaders Timer -> ListOfInvaders
 ;; consumes a list of invaders and tick every invader-x position by INVADER-X-SPEED and invader-y position by INVADER-Y-SPEED in the list
