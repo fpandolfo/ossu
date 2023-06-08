@@ -163,7 +163,7 @@
 ;; Functions:
 
 ;; Game -> Game
-;; start the world with initial state Game
+;; start the world with initial state Game (main (make-game empty empty (make-tank 100 0)))
 (define (main c)
   (big-bang c                   ; Game
     (on-tick   tick-game)       ; Game -> Game
@@ -173,20 +173,16 @@
 
 ;; Game -> Game
 ;; tick the next game state, calculating all its components coordinates position
-;;!! Have to finish the Invader, i think i will need to do a separated collision function to operate over invaders and missiles
-
 (define (tick-game s)
-  (make-game (generate-loi (game-invaders s)) (tick-lom (game-missiles s)) (tick-tank (game-tank s))))
+  (make-game (generate-loi (remove-collided-invaders (game-missiles s) (game-invaders s))) (tick-lom (remove-collided-missiles (game-missiles s) (game-invaders s))) (tick-tank (game-tank s))))
 
 ;; Game KeyEvent -> Game
 ;; handle all keys to produce next gamestate
-
 (define (handle-key s ke)
   (make-game (game-invaders s) (fire-missile (game-missiles s) (game-tank s) ke) (tank-direction (game-tank s) ke)))
 
 ;; Game -> Image
 ;; produce the image of game state, for every Invader in ListOfInvader, Missile in ListOfMissile and Tank
-;;!! Need to finish Invader
 (check-expect (render-game (make-game LOI1 LOM1 (make-tank 100 0))) (place-image TANK 100 TANK-Y-POSITION BACKGROUND))
 (check-expect (render-game (make-game LOI2 LOM2 (make-tank 100 0))) (place-image INVADER 100 200
                                                                                  (place-image MISSILE 150 300
@@ -509,7 +505,6 @@
 ;; consumes a random number between 0 (inclusive) and 2 (exclusive), and produce:
 ;; 1 case >= 0.5
 ;; -1 case < 0.5
-
 (define (random-one-or-minus-one x)
   (if (< (random x) 1)
       -1
@@ -519,51 +514,111 @@
 ;; consumes a random number between 0 (inclusive) and 10 (exclusive), and produce:
 ;; true: case >= 5
 ;; false: case < 5
-
 (define (spawn? invade-rate)
   (< (random invade-rate) 2))
 
-;; Game -> Game
-;; consumes a list of invaders and a list of missiles from Game, check it's invaders x and y position, and missile x and y position
-;; if the positions match by HIT-RANGE distance, then remove invader from list of invaders
-;; and remove missile from list of missiles
-(check-expect (has-collided (make-game empty empty (make-tank 50 0))) (make-game empty empty (make-tank 50 0)))
-(check-expect (has-collided (make-game (cons (make-invader 100 150 -1) empty)
-                                       (cons (make-missile 100 50) empty)
-                                       (make-tank 50 0)))
-              (make-game (cons (make-invader 100 150 -1) empty)
-                         (cons (make-missile 100 50) empty)
-                         (make-tank 50 0)))
 
-(check-expect (has-collided (make-game (cons (make-invader 100 150 -1) (cons (make-invader 200 270 1) empty))
-                                       (cons (make-missile 100 50) (cons (make-missile 200 270) empty))
-                                       (make-tank 50 0)))
-              (make-game (cons (make-invader 100 150 -1) empty)
-                         (cons (make-missile 100 50) empty)
-                         (make-tank 50 0)))
+;;===== Collision Functions =====
 
-(check-expect (has-collided (make-game (cons (make-invader 100 150 -1) (cons (make-invader 300 270 1) empty))
-                                       (cons (make-missile 100 150) (cons (make-missile 200 270) empty))
-                                       (make-tank 50 0)))
-              (make-game (cons (make-invader 300 270 1) empty)
-                         (cons (make-missile 200 270) empty)
-                         (make-tank 50 0)))
-(check-expect (has-collided (make-game (cons (make-invader 100 150 -1) (cons (make-invader 300 270 1) (cons (make-invader 50 160 1) empty)))
-                                       (cons (make-missile 50 160) (cons (make-missile 200 270) empty))
-                                       (make-tank 50 0)))
-              (make-game (cons (make-invader 100 150 -1) (cons (make-invader 300 270 1) empty))
-                         (cons (make-missile 200 270) empty)
-                         (make-tank 50 0)))
+;; ListOfMissiles ListOfInvaders -> ListOfMissiles
+;; Returns a filtered list of missile, if asserted that a missile has collided with an invader remove from list
+;; for that, missile-x and missile-y range must be igual to invader-x and invader-y range
+(check-expect (remove-collided-missiles empty empty) empty)
+(check-expect (remove-collided-missiles empty (cons (make-invader 100 150 -1) empty)) empty)
+(check-expect (remove-collided-missiles (cons (make-missile 100 100) empty) empty) (cons (make-missile 100 100) empty))
+(check-expect (remove-collided-missiles (cons (make-missile 100 50) empty) empty) (cons (make-missile 100 50) empty))
+(check-expect (remove-collided-missiles (cons (make-missile 100 50) empty) (cons (make-invader 100 150 -1) empty)) (cons (make-missile 100 50) empty))
+(check-expect (remove-collided-missiles (cons (make-missile 100 50)
+                                              (cons (make-missile 200 270) empty))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 200 270 1) empty))) (cons (make-missile 100 50) empty))
+(check-expect (remove-collided-missiles (cons (make-missile 100 150)
+                                              (cons (make-missile 20 270) empty))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 200 270 1) empty))) (cons (make-missile 20 270) empty))
+(check-expect (remove-collided-missiles (cons (make-missile 50 160)
+                                              (cons (make-missile 200 270) empty))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 300 270 1)
+                                                    (cons (make-invader 50 160 1) empty)))) (cons (make-missile 200 270) empty))
+(check-expect (remove-collided-missiles (cons (make-missile 50 160)
+                                              (cons (make-missile 200 270)
+                                                    (cons (make-missile 230 70) empty)))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 300 270 1)
+                                                    (cons (make-invader 50 160 1)
+                                                          (cons (make-invader 230 70 1) empty))))) (cons (make-missile 200 270) empty))
 
-;(define (has-collided g) (make-game empty empty (make-tank 50 0)));stub
 
-;<Template from Game>
-#;
-(define (has-collided s)
-  (cond [(or (empty? (game-invaders s)) (empty? (game-missiles s))) s]
-        [(and (= (invader-x (first (game-invaders s))) (missile-x (first (game-missiles s))))
-              (= (invader-y (first (game-invaders s))) (missile-y (first (game-missiles s)))))
-         (make-game (rest (game-invaders s)) (rest (game-missiles s)) (game-tank s))]
-        [(and (= (invader-x (first (game-invaders (has-collided s)))) (first (missile-x (game-missiles (has-collided s)))))
-              (= (invader-y (first (game-invaders (has-collided s)))) (first (missile-y (game-missiles (has-collided s))))))
-         (make-game (rest (game-invaders s)) (rest (game-missiles s)) (game-tank s))]))
+;(define (remove-collided-missiles lom loi) empty);stub
+
+;<Template from LoM and LoI>
+(define (remove-collided-missiles lom loi)
+  (cond [(empty? lom) empty]
+        [(empty? loi) lom]
+        [else
+         (if (any-missile-collision? (first lom) loi)
+             (remove-collided-missiles (rest lom) (rest loi))
+             (cons (first lom) (remove-collided-missiles (rest lom) loi)))]))
+
+;; Missile Invader -> Boolean
+;; consumes a missile and invader to check if they collided, comparing their x and y coordinates
+;; if missile-x and missile-y and invader-x and invader-y matchs, they collided, means true
+(define (collision? missile invader)
+  (and (and (>= (+ (missile-x missile) (/ (image-width MISSILE) 2)) (- (invader-x invader) (/ (image-width INVADER) 2)))
+            (<= (- (missile-x missile) (/ (image-width MISSILE) 2)) (+ (invader-x invader) (/ (image-width INVADER) 2))))
+       (and (>= (+ (missile-y missile) (/ (image-height MISSILE) 2)) (- (invader-y invader) (/ (image-height INVADER) 2)))
+            (<= (- (missile-y missile) (/ (image-height MISSILE) 2)) (+ (invader-y invader) (/ (image-height INVADER) 2))))))
+
+;; Missile ListOfInvaders -> Boolean
+;; compare a missile coordinates with every invader position in list of invaders to know if they collided
+(define (any-missile-collision? missile loi)
+  (cond [(empty? loi) false]
+        [(collision? missile (first loi)) true]
+        [else (any-missile-collision? missile (rest loi))]))
+
+
+;; Invader ListOfMissiles -> Boolean
+;; compare a invader coordinates with every missile position in list of missiles to know if they collided
+(define (any-invader-collision? lom invader)
+  (cond [(empty? lom) false]
+        [(collision? (first lom) invader) true]
+        [else (any-invader-collision? (rest lom) invader)]))
+
+
+;; ListOfMissiles ListOfInvaders -> ListOfInvaders
+;; Returns a filtered list of invaders, if asserted that a missile has collided with an invader remove from list
+;; for that, missile-x and missile-y range must be igual to invader-x and invader-y range
+(check-expect (remove-collided-invaders empty empty) empty)
+(check-expect (remove-collided-invaders empty (cons (make-invader 100 150 -1) empty)) (cons (make-invader 100 150 -1) empty))
+(check-expect (remove-collided-invaders (cons (make-missile 100 100) empty) empty) empty)
+(check-expect (remove-collided-invaders (cons (make-missile 100 50) empty) (cons (make-invader 100 150 -1) empty)) (cons (make-invader 100 150 -1) empty))
+(check-expect (remove-collided-invaders (cons (make-missile 100 50)
+                                              (cons (make-missile 200 270) empty))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 200 270 1) empty))) (cons (make-invader 100 150 -1) empty))
+(check-expect (remove-collided-invaders (cons (make-missile 100 150)
+                                              (cons (make-missile 20 270) empty))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 200 270 1) empty))) (cons (make-invader 200 270 1) empty))
+(check-expect (remove-collided-invaders (cons (make-missile 50 160)
+                                              (cons (make-missile 200 270) empty))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 300 270 1)
+                                                    (cons (make-invader 50 160 1) empty)))) (cons (make-invader 100 150 -1) (cons (make-invader 300 270 1) empty)))
+(check-expect (remove-collided-invaders (cons (make-missile 50 160)
+                                              (cons (make-missile 200 270)
+                                                    (cons (make-missile 230 70) empty)))
+                                        (cons (make-invader 100 150 -1)
+                                              (cons (make-invader 300 270 1)
+                                                    (cons (make-invader 50 160 1)
+                                                          (cons (make-invader 230 70 1) empty))))) (cons (make-invader 100 150 -1) (cons (make-invader 300 270 1) empty)))
+
+;<Template from LoM and LoI>
+(define (remove-collided-invaders lom loi)
+  (cond [(empty? loi) empty]
+        [(empty? lom) loi]
+        [else
+         (if (any-invader-collision? lom (first loi))
+             (remove-collided-invaders (rest lom) (rest loi))
+             (cons (first loi) (remove-collided-invaders lom (rest loi))))]))
