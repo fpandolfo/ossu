@@ -131,3 +131,4 @@ A repository dedicated to my journey and adventure in pursuit of self-taught kno
 | Data Science (Specialization)                                 | 43 weeks | 1-6 hours/week  | none                                        |
 | Functional Programming in Scala (Specialization)              | 29 weeks | 4-5 hours/week  | One year programming experience             |
 | Game Design and Development with Unity 2020 (Specialization)  | 6 months | 5 hours/week    | programming, interactive design             |
+
